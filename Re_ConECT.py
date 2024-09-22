@@ -229,9 +229,6 @@ def suspected_diagnoses(patient_info):
         "input": qa_human_prompt,
     })
 
-    print("1: patient's condition and suggest suspected diagnoses")
-    print(response["answer"])
-
     return response["answer"]
 
 # PDF processing and indexing function
@@ -388,9 +385,6 @@ def get_examination_and_red_flags(suspected_diagnoses):
 
     response1 = rag_chain1.invoke({"input": qa_human_prompt1})
 
-    print("\n2: suggest further examinations")
-    print(response1["answer"])
-
     qa_human_prompt2 = f"""
     History_questions:
     {history_questions}
@@ -400,10 +394,7 @@ def get_examination_and_red_flags(suspected_diagnoses):
 
     response2 = rag_chain2.invoke({"input": qa_human_prompt2})
 
-    print("\n3: provide appropriate recommendations")
-    print(response2["answer"])
-
-    return response2["answer"]
+    return "\n2: suggest further examinations\n" + response1["answer"] + "\n\n3: provide appropriate recommendations\n" + response2["answer"]
 
 def calculate_7day_average(file_path, date=None):
     """
@@ -547,20 +538,10 @@ persist_directory3 = "content/drive/MyDrive/240814_Llama_RAG/chroma_db3"
 persist_directory4 = "content/drive/MyDrive/240814_Llama_RAG/chroma_db4"
 persist_directory5 = "content/drive/MyDrive/240814_Llama_RAG/chroma_db5"
 
-def patient_scores():
+def patient_scores(diagnosis_id):
     # Prompt the user to enter the diagnostic assessment ID
-    diagnosis_id = input("Please enter the diagnostic assessment ID: ")
+    #diagnosis_id = input("Please enter the diagnostic assessment ID: ")
     scores_file_path = f'content/drive/MyDrive/240814_Llama_RAG/{diagnosis_id}.csv'
-
-    # Check if the CSV file for the given diagnostic ID exists
-    if os.path.exists(scores_file_path):
-        print(f"Welcome, {diagnosis_id}")
-    else:
-        with open(scores_file_path, 'w', newline='') as file:
-            writer = csv.writer(file)
-            headers = ['datetime'] + [f'Item {i}' for i in range(1, 18)]
-            writer.writerow(headers)
-        print(f"{diagnosis_id}.csv file has been created.")
 
     # Generate today's date in YYYYMMDD format
     today_date = datetime.now().strftime("%Y%m%d")
@@ -570,7 +551,6 @@ def patient_scores():
 
     # Calculate 7-day average
     average_scores = calculate_7day_average(scores_file_path)
-    print(f"7-day average scores calculated for {diagnosis_id}.")
 
     # Input current item scores or load from file
     current_scores = input_item_scores(scores_file_path)
@@ -620,7 +600,7 @@ def create_rag_chain(vectorstore, api_key, system_prompt):
 
     return rag_chain
 
-def get_rehabilitation_evaluation():
+def get_rehabilitation_evaluation(decreased_items, patient_info):
     uploaded_file_path2 = "content/drive/MyDrive/240814_Llama_RAG/6_PTX.pdf"
     uploaded_file_path3 = "content/drive/MyDrive/240814_Llama_RAG/4_CUE_T_Manual.pdf"
     uploaded_file_path4 = "content/drive/MyDrive/240814_Llama_RAG/7_Stroke_Complications.pdf"
@@ -701,9 +681,6 @@ def get_rehabilitation_evaluation():
     rag_chain3 = create_rag_chain(vectorstore4, os.getenv("UPSTAGE_API_KEY"), system_prompt3)
     rag_chain4 = create_rag_chain(vectorstore5, os.getenv("UPSTAGE_API_KEY"), system_prompt3)
 
-    # Input or load patient information
-    diagnosis_id, decreased_items, patient_info = patient_scores()
-
     diagnosed_patient = patient_info[0]
     patient_disability = patient_info[1]
     functional_evaluation = patient_info[2]
@@ -723,8 +700,9 @@ def get_rehabilitation_evaluation():
 
     response1 = rag_chain1.invoke({"input": qa_human_prompt1})
 
-    print("\n1: Suggest Functional_evaluation and Extract anatomical structures")
-    print(response1["answer"])
+    total_answer =""
+    
+    total_answer += "\n1: Suggest Functional_evaluation and Extract anatomical structures\n"+response1["answer"]
 
     pattern = r'⚑ Extract anatomical structure:.*?(?=⚑|\Z)'
     match = re.search(pattern, response1["answer"], re.DOTALL)
@@ -742,8 +720,7 @@ def get_rehabilitation_evaluation():
 
     response2 = rag_chain2.invoke({"input": qa_human_prompt2})
 
-    print("\n2: suggest exercises")
-    print(response2["answer"])
+    total_answer += "\n2: suggest exercises\n"+response2["answer"]
 
     qa_human_prompt3 = f"""
       Newly_acquired_symptoms:
@@ -752,15 +729,13 @@ def get_rehabilitation_evaluation():
     if diagnosed_patient == 'Stroke':
 
       response3 = rag_chain3.invoke({"input": qa_human_prompt3})
-
-      print("\n3: extracted complications and recommend whether hospital visit")
-      print(response3["answer"])
+      total_answer += "\n3: extracted complications and recommend whether hospital visit\n"+response3["answer"]
 
     elif diagnosed_patient == 'Spinal Cord Injury':
       response4 = rag_chain4.invoke({"input": qa_human_prompt3})
+      total_answer += "\n3: extracted complications and recommend whether hospital visit\n"+response4["answer"]
 
-      print("\n3: extracted complications and recommend whether hospital visit")
-      print(response4["answer"])
+    return total_answer
 
 def check_diagnosis():
     has_diagnosis = input("Do you have a diagnostic assessment? (yes/no): ").lower()
