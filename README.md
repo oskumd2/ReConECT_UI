@@ -1,28 +1,33 @@
 # ReConECT_UI
 UI for ReConECT
 
-## Put 240814_Llama_RAG from Google Drive in content/drive/MyDrive/ file path.
+## How to develop on your local environment
 
-## Manually set virtual environment in folder venv by running the following code in your terminal:
+Dowload db_data, rag_data folder on your root directory: folder available on Google Drive (https://drive.google.com/drive/folders/1Fl1vmiF3LYT4yNfc8pgcdeCtSNPx08zO?usp=drive_link)
+
+Manually set virtual environment in folder venv by running the following code in your terminal:
 
 Mac: python3 -m venv venv
 
 Windows: python -m venv venv
 
-## How to activate virtual environment in your terminal (may have to change Setting in Powershell to execute):
+Activate virtual environment in your terminal (may have to change Setting in Powershell to execute):
 
 Mac: source venv/bin/activate
 
 Windows: .\venv\Scripts\activate
 
+Install requirements by running pip install -r requirements.txt on your terminal.
 
-## How to creat "chatbot-ui" directory to manage React frontend
 
-npx create-react-app client
+Creat "chatbot-ui" directory to manage React frontend
 
-## Add Chatbot.js under ./chatbot-ui/src and change App.js under ./chatbot-ui/src
-## Add app.py backend file under root directory
+npx create-react-app chatbot-ui
 
-## Enjoy and have a good night
+
+Chatbot.js under ./chatbot-ui/src/ and change App.js under ./chatbot-ui/src/ and package.json under ./chatbot-ui
+
+Add app.py backend file, ReConECT_v2.py, .nev, Procfile under root directory
+
 
 
