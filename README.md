@@ -25,9 +25,31 @@ Creat "chatbot-ui" directory to manage React frontend
 npx create-react-app chatbot-ui
 
 
-Chatbot.js under ./chatbot-ui/src/ and change App.js under ./chatbot-ui/src/ and package.json under ./chatbot-ui
+migrate /src folder under ./chatbot-ui/src/ and put package.json under ./chatbot-ui
 
 Add app.py backend file, ReConECT_v2.py, .nev, Procfile under root directory
 
+## How to deploy in server
+
+under virtual environment run following code:
+
+
+heroku login
+
+git init
+
+git add .env app_v2.py Procfile Re_ConECT_v2.py requirements.txt db_data rag_data
+
+git commit -m 'ReConECT'
+
+heroku git:remote -a reconect
+
+heroku buildpacks:set heroku/python
+
+git push heroku master
+
+(exit from venv) cd chatbot-ui
+
+npm run build
 
 
