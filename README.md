@@ -1,7 +1,7 @@
 # ReConECT_UI
 UI for ReConECT
 
-## How to develop on your local environment
+## How to develop the app in your local environment
 
 Dowload db_data, rag_data folder on your root directory: folder available on Google Drive (https://drive.google.com/drive/folders/1Fl1vmiF3LYT4yNfc8pgcdeCtSNPx08zO?usp=drive_link)
 
@@ -29,7 +29,7 @@ migrate /src folder under ./chatbot-ui/src/ and put package.json under ./chatbot
 
 Add app.py backend file, ReConECT_v2.py, .nev, Procfile under root directory
 
-## How to deploy in server
+## How to deploy on server
 
 under virtual environment run following code:
 
