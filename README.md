@@ -6,8 +6,7 @@ UI for ReConECT
 Dowload db_data, rag_data folder on your root directory: folder available on Google Drive (https://drive.google.com/drive/folders/1Fl1vmiF3LYT4yNfc8pgcdeCtSNPx08zO?usp=drive_link)
 
 
-**Manually set virtual environment in folder venv by running the following code in your terminal:
-
+**`Manually set virtual environment in folder venv by running the following code in your terminal:`<br />
 Mac: python3 -m venv venv
 
 Windows: python -m venv venv
