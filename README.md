@@ -34,10 +34,13 @@ Add app.py backend file, ReConECT_v2.py, .nev, Procfile under root directory
 under virtual environment run following code:
 
 
-heroku login <br/ >
-git init <br/ >
-git add .env app_v2.py Procfile Re_ConECT_v2.py requirements.txt db_data rag_data <br/ >
-git commit -m 'ReConECT' <br/ >
+heroku login
+
+git init
+
+git add .env app_v2.py Procfile Re_ConECT_v2.py requirements.txt db_data rag_data
+
+git commit -m 'ReConECT'
 
 heroku git:remote -a reconect
 
