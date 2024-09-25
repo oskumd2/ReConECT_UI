@@ -3,7 +3,7 @@ UI for ReConECT
 
 ## How to develop the app in your local environment
 
-Dowload db_data, rag_data folder on your root directory: folder available on Google Drive (https://drive.google.com/drive/folders/1Fl1vmiF3LYT4yNfc8pgcdeCtSNPx08zO?usp=drive_link)
+`Dowload db_data, rag_data folder on your root directory: folder available on Google Drive`<br /> (https://drive.google.com/drive/folders/1Fl1vmiF3LYT4yNfc8pgcdeCtSNPx08zO?usp=drive_link)
 
 
 `Manually set virtual environment in folder venv by running the following code in your terminal:`<br />
@@ -22,25 +22,18 @@ migrate /src folder under ./chatbot-ui/src/ and put package.json under ./chatbot
 Add app.py backend file, ReConECT_v2.py, .nev, Procfile under root directory<br /><br />
 
 ## How to deploy on server
-**under virtual environment run following code:
+`under virtual environment run following code:`<br /><br />
+[backend terminal] <br />
+heroku login<br />
+git init<br />
+git add .env app_v2.py Procfile Re_ConECT_v2.py requirements.txt db_data rag_data<br />
+git commit -m 'ReConECT'<br />
+heroku git:remote -a reconect<br />
+heroku buildpacks:set heroku/python<br />
+git push heroku master<br /><br />
 
-
-heroku login
-
-git init
-
-git add .env app_v2.py Procfile Re_ConECT_v2.py requirements.txt db_data rag_data
-
-git commit -m 'ReConECT'
-
-heroku git:remote -a reconect
-
-heroku buildpacks:set heroku/python
-
-git push heroku master
-
-(exit from venv) cd chatbot-ui
-
+[frontend terminal] <br />
+(exit from venv) cd chatbot-ui<br />
 npm run build
 
 
