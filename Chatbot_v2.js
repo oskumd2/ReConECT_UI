@@ -48,11 +48,12 @@ function Chatbot_v2() {
     const [input, setInput] = useState('');
     const [currentStep, setCurrentStep] = useState('initial');
     const [patientInfo, setPatientInfo] = useState({});
-    const [diagnosis_id, setDiagnosis_id] = useState('');
     const [disabilities, setDisabilities] = useState([]);
     const [decreased_items, setDecreased_items] = useState([[]]);
     const [diagnosis, setDiagnosis] = useState('');
     const [emptyDisabilities, setEmptyDisabilities]= useState([])
+    const [ID, setID] = useState('');
+    const [Password, setPassword] = useState('');
 
     const questions_Lower_Extremity = [
         { key: "patient_chief_complaint", question: "(Q0)\nDoctor: What is your chief complaint?\nPatient: ", validator: (x) => x.length > 0 },
@@ -798,6 +799,7 @@ function Chatbot_v2() {
         setEditIndex(index);
     };
 
+    const herokulink =""; //"https://reconect-ef4dd30ce7be.herokuapp.com"
     const sendMessage = async () => {
         try {
             let response;
@@ -812,24 +814,62 @@ function Chatbot_v2() {
             }
             if (currentStep === 'initial') {
                 setMessages([...messages, { text: "Do you have a diagnostic assessment? (yes/no)", user: false }]);
-                response = await axios.post('https://reconect-ef4dd30ce7be.herokuapp.com/check_diagnosis', { has_diagnosis: input });
-                if (input.toLowerCase() === 'no') {
-                    console.log(response.data.hasExistingInfo);
-                    if (response.data.hasExistingInfo) {
-                        setMessages([...messages, { text: "Found existing patient information. Would you like to use it? (yes/no)", user: false }]);         
-                        setCurrentStep('awaitingExistingInfoResponse');
-                    } else {
-                        setMessages([...messages,{ text: "No existing patient information found. \n", user: false }, { text: "(Q0)\nDoctor: What is your chief complaint?\nPatient: ", user: false }]);
-                        setCurrentStep('userInput');
-                    } 
+                if (input.toLowerCase() === 'no') {       
+                    setCurrentStep('checkif_new_patient');
                 } else if (input.toLowerCase() === 'yes') {
-                    setCurrentStep('Rehab');
-                    setMessages([...messages, { text: "Please enter the diagnostic assessment ID:", user: false }]);
+                    setCurrentStep('R_checkif_new_patient');
                 }
-            } 
+                setMessages([...messages, { text: "Are you a new patient? (yes/no)", user: false }]);
+            }
+            if (currentStep === 'checkif_new_patient') {
+                if (input.toLowerCase() === 'yes') {
+                    setCurrentStep('new_patient');
+                    setMessages([...messages, { text: "Press any keys to register. ", user: false }]);
+                } else if (input.toLowerCase() === 'no') {
+                    setCurrentStep('not_new_patient');
+                    setMessages([...messages, { text: "Press any keys for login.", user: false }]);
+                }
+            }
+            if (currentStep === 'new_patient') {
+                const patient_info_temp = [];
+                const temp_1 = prompt(`Enter New ID (8-digits number): `);
+                patient_info_temp.push(temp_1);
+                const temp_2 = prompt(`Enter New Password (6-digits number): `);
+                patient_info_temp.push(temp_2);
+                response = await axios.post(`${herokulink}/exist_id`, { patientinfo: patient_info_temp });
+                if (response.data.exist_id) {
+                    setCurrentStep('new_patient');
+                    setMessages([...messages, { text: "ID already exists. Enter different 8-digits number. Press any keys to register again:", user: false }]);                        
+                } else {
+                    setID(temp_1);
+                    setPassword(temp_2);
+                    setCurrentStep('userInput');
+                    setMessages([...messages, { text: "Registered! \n (Q0)\nDoctor: What is your chief complaint?\nPatient: ", user: false }]);
+                }
+            }
+            if (currentStep === 'not_new_patient') {
+                const patient_info_temp = [];
+                const temp_1 = prompt(`Enter ID (8-digits number): `);
+                patient_info_temp.push(temp_1);
+                const temp_2 = prompt(`Enter Password (6-digits number): `);
+                patient_info_temp.push(temp_2);
+                response = await axios.post(`${herokulink}/valid_id`, { patientinfo: patient_info_temp });
+                if (!response.data.valid_id) {
+                    setCurrentStep('not_new_patient');
+                    setMessages([...messages, { text: "Invalid Password. Press any keys to try again.", user: false }]);                        
+                } else if (!response.data.valid_password) {
+                    setCurrentStep('not_new_patient');
+                    setMessages([...messages, { text: "Invalid ID. Press any keys to try again.", user: false }]);                        
+                } else {
+                    setID(temp_1);
+                    setPassword(temp_2);
+                    setCurrentStep('awaitingExistingInfoResponse');
+                    setMessages([...messages, { text: "Found existing patient information. Would you like to use it? (yes/no) ", user: false }]);
+                }
+            }
             if (currentStep === 'awaitingExistingInfoResponse') {
                 if (input.toLowerCase() === 'yes') {
-                    response = await axios.post('https://reconect-ef4dd30ce7be.herokuapp.com/use_existing_info');
+                    response = await axios.post(`${herokulink}/use_existing_info`, {ID: ID, Password: Password});
                         setMessages([...messages, { text: input, user: true },{ text: response.data.diagnosis, user: false },{ text: "All questions completed. Send any keys to restart.", user: false }]);
                     setCurrentStep('complete');
                 } else if (input.toLowerCase() === 'no') {
@@ -857,7 +897,7 @@ function Chatbot_v2() {
                     const newPatientInfo = { ...patientInfo, [currentQuestion.key]: input };
                     setPatientInfo(newPatientInfo);
                     if (Object.keys(newPatientInfo).length === questions_Lower_Extremity.length) {
-                        response = await axios.post('https://reconect-ef4dd30ce7be.herokuapp.com/user_input', { patient_info: newPatientInfo });
+                        response = await axios.post(`${herokulink}/user_input`, { 'patient_info': newPatientInfo, 'ID': ID, 'Password': Password});
                             setMessages([...messages, { text: input, user: true },{ text: response.data.diagnosis, user: false },{ text: "All questions completed. Send any keys to restart.", user: false }]);
                         setCurrentStep('complete');
                     } else {
@@ -873,7 +913,7 @@ function Chatbot_v2() {
                     const newPatientInfo = { ...patientInfo, [currentQuestion.key]: input };
                     setPatientInfo(newPatientInfo);
                     if (Object.keys(newPatientInfo).length === questions_Upper_Extremity.length) {
-                        response = await axios.post('https://reconect-ef4dd30ce7be.herokuapp.com/user_input', { patient_info: newPatientInfo });
+                        response = await axios.post(`${herokulink}/user_input`, { 'patient_info': newPatientInfo, 'ID': ID, 'Password': Password});
                             setMessages([...messages, { text: input, user: true },{ text: response.data.diagnosis, user: false },{ text: "All questions completed. Send any keys to restart.", user: false }]);
                         setCurrentStep('complete');
                     } else {
@@ -889,7 +929,7 @@ function Chatbot_v2() {
                     const newPatientInfo = { ...patientInfo, [currentQuestion.key]: input };
                     setPatientInfo(newPatientInfo);
                     if (Object.keys(newPatientInfo).length === questions_Low_Back_Pain.length) {
-                        response = await axios.post('https://reconect-ef4dd30ce7be.herokuapp.com/user_input', { patient_info: newPatientInfo });
+                        response = await axios.post(`${herokulink}/user_input`, { 'patient_info': newPatientInfo, 'ID': ID, 'Password': Password});
                             setMessages([...messages, { text: input, user: true },{ text: response.data.diagnosis, user: false },{ text: "All questions completed. Send any keys to restart.", user: false }]);
                         setCurrentStep('complete');
                     } else {
@@ -905,7 +945,7 @@ function Chatbot_v2() {
                     const newPatientInfo = { ...patientInfo, [currentQuestion.key]: input };
                     setPatientInfo(newPatientInfo);
                     if (Object.keys(newPatientInfo).length === questions_Neck_Pain.length) {
-                        response = await axios.post('https://reconect-ef4dd30ce7be.herokuapp.com/user_input', { patient_info: newPatientInfo });
+                        response = await axios.post(`${herokulink}/user_input`, { 'patient_info': newPatientInfo, 'ID': ID, 'Password': Password});
                             setMessages([...messages, { text: input, user: true },{ text: response.data.diagnosis, user: false },{ text: "All questions completed. Send any keys to restart.", user: false }]);
                         setCurrentStep('complete');
                     } else {
@@ -915,20 +955,56 @@ function Chatbot_v2() {
                     setMessages([...messages, { text: "Invalid input. Please try again.", user: false }]);
                 }            
             }
-
-            if (currentStep === 'Rehab') {
-                response = await axios.post('https://reconect-ef4dd30ce7be.herokuapp.com/Check_diagnosis_id', { diagnosis_id: input });
-                if (response.data.exist_diagnosis_id) {
-                    setCurrentStep('File_exists');
-                } else {
-                    setCurrentStep('File_not_exists');
+            ///////////////////////
+            if (currentStep === 'R_checkif_new_patient') {
+                if (input.toLowerCase() === 'yes') {
+                    setCurrentStep('R_new_patient');
+                    setMessages([...messages, { text: "Press any keys to register. ", user: false }]);
+                } else if (input.toLowerCase() === 'no') {
+                    setCurrentStep('R_not_new_patient');
+                    setMessages([...messages, { text: "Press any keys for login.", user: false }]);
                 }
-                setDiagnosis_id(response.data.diagnosis_id);
-                setMessages([...messages, {text:input, user:true},{ text: response.data.result, user: false }]);
+            }
+            if (currentStep === 'R_new_patient') {
+                const patient_info_temp = [];
+                const temp_1 = prompt(`Enter New ID (8-digits number): `);
+                patient_info_temp.push(temp_1);
+                const temp_2 = prompt(`Enter New Password (6-digits number): `);
+                patient_info_temp.push(temp_2);
+                response = await axios.post(`${herokulink}/R_exist_id`, { patientinfo: patient_info_temp });
+                if (response.data.exist_id) {
+                    setCurrentStep('R_new_patient');
+                    setMessages([...messages, { text: "ID already exists. Enter different 8-digits number. Press any keys to register again:", user: false }]);                        
+                } else {
+                    setID(temp_1);
+                    setPassword(temp_2);
+                    setCurrentStep('File_not_exists');
+                    setMessages([...messages, { text: "No existing patient info found for "+ ID+". Press any keys to write new Patient info.", user: false }]);
+                }
+            }
+            if (currentStep === 'R_not_new_patient') {
+                const patient_info_temp = [];
+                const temp_1 = prompt(`Enter ID (8-digits number): `);
+                patient_info_temp.push(temp_1);
+                const temp_2 = prompt(`Enter Password (6-digits number): `);
+                patient_info_temp.push(temp_2);
+                response = await axios.post(`${herokulink}/R_valid_id`, { patientinfo: patient_info_temp });
+                if (!response.data.valid_id) {
+                    setCurrentStep('R_not_new_patient');
+                    setMessages([...messages, { text: "Invalid ID. Press any keys to try again.", user: false }]);                        
+                } else if (!response.data.valid_password) {
+                    setCurrentStep('R_not_new_patient');
+                    setMessages([...messages, { text: "Invalid Password. Press any keys to try again.", user: false }]);                        
+                } else {
+                    setID(temp_1);
+                    setPassword(temp_2);
+                    setCurrentStep('File_exists');
+                    setMessages([...messages, { text: "Loaded patient information for "+ ID+" from existing file. Would you like to use past diagnosis and disabilities?", user: false }]);
+                }
             }
             if (currentStep === 'File_exists') {
                 if (input.toLowerCase() === 'yes') {
-                    response = await axios.post('https://reconect-ef4dd30ce7be.herokuapp.com/File_exists', {'diagnosis_id': diagnosis_id});
+                    response = await axios.post(`${herokulink}/File_exists`, {'diagnosis_id': ID,'Password': Password});
                     setDiagnosis(response.data.diagnosis);
                     setDisabilities(response.data.disabilities);
                     if (response.data.empty_disabilities.length===0) {
@@ -950,12 +1026,12 @@ function Chatbot_v2() {
                 const temp_2 = prompt(`Enter disability (write your main difficulty): `);
                 patient_info_temp.push(temp_2);
 
-                response = await axios.post('https://reconect-ef4dd30ce7be.herokuapp.com/Update_patient_info', { 'patient_info': patient_info_temp, 'diagnosis_id': diagnosis_id})
+                response = await axios.post(`${herokulink}/Update_patient_info`, { 'patient_info': patient_info_temp, 'diagnosis_id': ID, 'Password': Password})
                 setMessages([...messages, { text: input, user: true },{ text: response.data.result, user: false },{ text: ". Would you like to use these diagnosis and disabilities?", user: false }]);
                 setCurrentStep('File_exists');  
             }
             if (currentStep === 'Compare_item_scores') {
-                response = await axios.post('https://reconect-ef4dd30ce7be.herokuapp.com/Input_item_scores', { 'diagnosis_id': diagnosis_id});
+                response = await axios.post(`${herokulink}/Input_item_scores`, { 'diagnosis_id': ID, 'Password': Password});
                 setDecreased_items(response.data.decreased_items);    
                 if (Array.isArray(decreased_items) && decreased_items.every(item => item === "")) {
                     setCurrentStep('ComplicationsInput_temp')
@@ -999,12 +1075,12 @@ function Chatbot_v2() {
                     answers.push(answer);
                     answer =[];
                 }
-                response = await axios.post('https://reconect-ef4dd30ce7be.herokuapp.com/Get_item_scores', { 'emptyDisabilities': emptyDisabilities, 'answers': answers, 'diagnosis_id': diagnosis_id})
+                response = await axios.post(`${herokulink}/Get_item_scores`, { 'emptyDisabilities': emptyDisabilities, 'answers': answers, 'diagnosis_id': ID})
                 setCurrentStep('Compare_item_scores');
                 setMessages([...messages, { text: input, user: true },{ text: response.data.result, user: false },{ text: "Press any keys to compare today's score with last 7-day's score.", user: false }]);
             }
             if (currentStep === 'RehabTraining') {
-                response =await axios.post('https://reconect-ef4dd30ce7be.herokuapp.com/Get_rehabilitation_evaluation', { 'decreased_items': decreased_items, 'disabilities': disabilities})
+                response =await axios.post(`${herokulink}/Get_rehabilitation_evaluation`, { 'decreased_items': decreased_items, 'disabilities': disabilities})
                 setMessages([...messages, { text: input, user: true },{ text: response.data.result, user: false },{ text: "Now let me screen possible complications. Press any keys to proceed.", user: false }]);
                 setCurrentStep('ComplicationsInput_temp');                
             }
@@ -1035,7 +1111,7 @@ function Chatbot_v2() {
                             const newPatientInfo = { ...patientInfo, [currentQuestion.key]: input };
                             setPatientInfo(newPatientInfo);
                             if (Object.keys(newPatientInfo).length === complication_questions_Traumatic_Brain_Injury.length) {
-                                response = await axios.post('https://reconect-ef4dd30ce7be.herokuapp.com/complications_input', { patient_info: newPatientInfo, diagnosis: diagnosis });
+                                response = await axios.post(`${herokulink}/complications_input`, { patient_info: newPatientInfo, diagnosis: diagnosis });
                                     setMessages([...messages, { text: input, user: true },{ text: response.data.diagnosis, user: false },{ text: "All questions completed. Send any keys to restart.", user: false }]);
                                 setCurrentStep('complete');
                             } else {
@@ -1051,7 +1127,7 @@ function Chatbot_v2() {
                         const newPatientInfo = { ...patientInfo, [currentQuestion.key]: input };
                         setPatientInfo(newPatientInfo);
                         if (Object.keys(newPatientInfo).length === complication_questions_Stroke.length) {
-                            response = await axios.post('https://reconect-ef4dd30ce7be.herokuapp.com/complications_input', { patient_info: newPatientInfo, diagnosis: diagnosis });
+                            response = await axios.post(`${herokulink}/complications_input`, { patient_info: newPatientInfo, diagnosis: diagnosis });
                                 setMessages([...messages, { text: input, user: true },{ text: response.data.diagnosis, user: false },{ text: "All questions completed. Send any keys to restart.", user: false }]);
                             setCurrentStep('complete');
                         } else {
@@ -1067,7 +1143,7 @@ function Chatbot_v2() {
                         const newPatientInfo = { ...patientInfo, [currentQuestion.key]: input };
                         setPatientInfo(newPatientInfo);
                         if (Object.keys(newPatientInfo).length === complication_questions_Parkinsons_Disease.length) {
-                            response = await axios.post('https://reconect-ef4dd30ce7be.herokuapp.com/complications_input', { patient_info: newPatientInfo, diagnosis: diagnosis });
+                            response = await axios.post(`${herokulink}/complications_input`, { patient_info: newPatientInfo, diagnosis: diagnosis });
                                 setMessages([...messages, { text: input, user: true },{ text: response.data.diagnosis, user: false },{ text: "All questions completed. Send any keys to restart.", user: false }]);
                             setCurrentStep('complete');
                         } else {
@@ -1083,7 +1159,7 @@ function Chatbot_v2() {
                         const newPatientInfo = { ...patientInfo, [currentQuestion.key]: input };
                         setPatientInfo(newPatientInfo);
                         if (Object.keys(newPatientInfo).length === complication_questions_Spinal_Cord_Injury.length) {
-                            response = await axios.post('https://reconect-ef4dd30ce7be.herokuapp.com/complications_input', { patient_info: newPatientInfo, diagnosis: diagnosis });
+                            response = await axios.post(`${herokulink}/complications_input`, { patient_info: newPatientInfo, diagnosis: diagnosis });
                                 setMessages([...messages, { text: input, user: true },{ text: response.data.diagnosis, user: false },{ text: "All questions completed. Send any keys to restart.", user: false }]);
                             setCurrentStep('complete');
                         } else {
@@ -1099,7 +1175,7 @@ function Chatbot_v2() {
                         const newPatientInfo = { ...patientInfo, [currentQuestion.key]: input };
                         setPatientInfo(newPatientInfo);
                         if (Object.keys(newPatientInfo).length === complication_questions_ALS.length) {
-                            response = await axios.post('https://reconect-ef4dd30ce7be.herokuapp.com/complications_input', { patient_info: newPatientInfo, diagnosis: diagnosis });
+                            response = await axios.post(`${herokulink}/complications_input`, { patient_info: newPatientInfo, diagnosis: diagnosis });
                                 setMessages([...messages, { text: input, user: true },{ text: response.data.diagnosis, user: false },{ text: "All questions completed. Send any keys to restart.", user: false }]);
                             setCurrentStep('complete');
                         } else {
@@ -1115,7 +1191,7 @@ function Chatbot_v2() {
                         const newPatientInfo = { ...patientInfo, [currentQuestion.key]: input };
                         setPatientInfo(newPatientInfo);
                         if (Object.keys(newPatientInfo).length === complication_questions_Peripheral_Neuropathy.length) {
-                            response = await axios.post('https://reconect-ef4dd30ce7be.herokuapp.com/complications_input', { patient_info: newPatientInfo, diagnosis: diagnosis });
+                            response = await axios.post(`${herokulink}/complications_input`, { patient_info: newPatientInfo, diagnosis: diagnosis });
                                 setMessages([...messages, { text: input, user: true },{ text: response.data.diagnosis, user: false },{ text: "All questions completed. Send any keys to restart.", user: false }]);
                             setCurrentStep('complete');
                         } else {
@@ -1168,6 +1244,7 @@ function Chatbot_v2() {
                 type="text" 
                 value={input} 
                 onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && sendMessage()} // Add this line
                 style={{ fontSize: '16px' }} 
             />     
             <StyledButton onClick={sendMessage}>Send</StyledButton>

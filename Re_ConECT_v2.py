@@ -39,8 +39,6 @@ persist_directory3_Spinal_Cord_Injury = "db_data/chroma_db3_Spinal_Cord_Injury"
 persist_directory3_ALS = "db_data/chroma_db3_ALS"
 persist_directory3_Peripheral_Neuropathy = "db_data/chroma_db3_Peripheral_Neuropathy"
 
-# Set the path for saving patient information
-patient_info_path = "db_data/patient_info.json"
 
 # Dictionary for disabilities
 matching={
@@ -68,17 +66,10 @@ def process_pdf_onlyfile(file_path, persist_directory):
     return vectorstore
 
 # Function to save patient information to a JSON file
-def save_patient_info(patient_info):
-    with open(patient_info_path, 'w') as f:
+def save_patient_info(patient_info, ID, Password):
+    with open(f"db_data/patient_info_{ID}_{Password}.json", 'w') as f:
         json.dump(patient_info, f)
-    print(f"Patient information saved to {patient_info_path}")
-
-# Function to load patient information from a JSON file
-def load_patient_info():
-    if os.path.exists(patient_info_path):
-        with open(patient_info_path, 'r') as f:
-            return json.load(f)
-    return None
+    print(f"Patient information saved to db_data/patient_info_{ID}_{Password}.json")
 
 # RAG chain for 4 chief complaints
 def create_simple_rag_chain_Lower_Extremity(vectorstore, api_key):
@@ -1277,7 +1268,7 @@ def create_history_questions_Peripheral_Neuropathy(patient_info):
     ])
 
 # Function to generate suspected diagnoses
-def suspected_diagnoses(patient_info):
+def suspected_diagnoses(patient_info, ID, Password):
     # Create RAG chain
     chief_complaint = patient_info["patient_chief_complaint"]
 
@@ -1332,7 +1323,7 @@ def suspected_diagnoses(patient_info):
         "input": qa_human_prompt,
     })
 
-    save_patient_info(patient_info)
+    save_patient_info(patient_info, ID, Password)
 
     return response["answer"]
 
@@ -1411,7 +1402,7 @@ def input_item_scores(file_path):
     if os.path.exists(file_path):
         df = pd.read_csv(file_path, parse_dates=['datetime'])
         df['datetime'] = pd.to_datetime(df['datetime'])
-        today_data = df[df['datetime'].dt.strftime("%-m/%-d/%Y") == today]
+        today_data = df[df['datetime'].dt.strftime("%m/%d/%Y") == today]
 
         if not today_data.empty:
             latest_scores = today_data.iloc[-1, 1:].tolist()
@@ -1423,7 +1414,7 @@ def input_item_scores(file_path):
         print("No existing file found. Please input current scores.")
 
     scores = []
-    for i in range(1, 18):
+    for i in range(1, len(df.columns)):
         while True:
             try:
                 score = float(input(f"Enter the score for Item {i}: "))
@@ -1434,14 +1425,14 @@ def input_item_scores(file_path):
 
     # Save the new scores to the CSV file
     new_row = [today] + scores
-    new_df = pd.DataFrame([new_row], columns=['datetime'] + [f'Item {i}' for i in range(1, 18)])
+    new_df = pd.DataFrame([new_row], columns=['datetime'] + [f'Item {i}' for i in range(1, len(df.columns))])
 
     if os.path.exists(file_path):
         existing_df = pd.read_csv(file_path)
         updated_df = pd.concat([existing_df, new_df], ignore_index=True)
-        updated_df.to_csv(file_path, index=False, date_format='%-m/%-d/%Y')
+        updated_df.to_csv(file_path, index=False, date_format='%m/%d/%Y')
     else:
-        new_df.to_csv(file_path, index=False, date_format='%-m/%-d/%Y')
+        new_df.to_csv(file_path, index=False, date_format='%m/%d/%Y')
 
     print(f"Saved today's scores ({today}) to file.")
     return scores

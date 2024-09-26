@@ -1,40 +1,59 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from waitress import serve
-import os, re, csv
+import os, re, csv, glob, json
 import pandas as pd
 from datetime import datetime
-from Re_ConECT_v2 import suspected_diagnoses, load_patient_info, calculate_7day_average, compare_scores, get_rehabilitation_evaluation, suspected_complications
+from Re_ConECT_v2 import suspected_diagnoses, calculate_7day_average, compare_scores, get_rehabilitation_evaluation, suspected_complications
 
 app = Flask(__name__)
 CORS(app)  # Ensure CORS is enabled
 
 ########
-@app.route('/check_diagnosis', methods=['POST'])
-def check_diagnosis():
+@app.route('/exist_id', methods=['POST'])
+def exist_id():
     try:
         data = request.json
-        print("Received /check_diagnosis request with data:", data)
-        has_diagnosis = data.get('has_diagnosis', '').lower()
-        if has_diagnosis == "yes":
-            result = "get_rehabilitation_evaluation"
-            return jsonify({"result": result})
-        elif has_diagnosis == "no":
-            has_existing_info = load_patient_info()
-            return jsonify({"hasExistingInfo": has_existing_info})
+        print("Received /exist_id request with data:", data)
+        patientinfo = data.get('patientinfo', '')
+        exist_id = glob.glob(f"db_data/patient_info_{patientinfo[0]}_*.json")
+        if(exist_id):
+            return jsonify({"exist_id": True})
         else:
-            return jsonify({"error": "Invalid input. Please answer 'yes' or 'no'."}), 400
+            return jsonify({"exist_id": False})
     except Exception as e:
-        print("Error in /check_diagnosis:", str(e))
+        print("Error in /exist_id:", str(e))
         return jsonify({"error": str(e)}), 500
 
+@app.route('/valid_id', methods=['POST'])
+def valid_id():
+    try:
+        data = request.json
+        print("Received /valid_id request with data:", data)
+        patientinfo = data.get('patientinfo', '')
+        exist_id = glob.glob(f"db_data/patient_info_{patientinfo[0]}_*.json")
+        exist_password =glob.glob(f"db_data/patient_info_{patientinfo[0]}_{patientinfo[1]}.json")
+
+        if(exist_id and exist_password):
+            return jsonify({"valid_id": True, "valid_password": True})
+        elif(exist_id and not exist_password):
+            return jsonify({"valid_id": True, "valid_password": False})
+        else:
+            return jsonify({"valid_id": False, "valid_password": False})
+    except Exception as e:
+        print("Error in /valid_id:", str(e))
+        return jsonify({"error": str(e)}), 500
+    
 @app.route('/user_input', methods=['POST'])
 def user_input():
     try:
         data = request.json
         print("Received /user_input request with data:", data)
         patient_info = data.get('patient_info', {})
-        result = suspected_diagnoses(patient_info)
+        ID = data.get('ID', {})
+        Password = data.get('Password', {})
+
+        result = suspected_diagnoses(patient_info, ID, Password)
         return jsonify({"diagnosis": result})
     except Exception as e:
         print("Error in /user_input:", str(e))
@@ -43,39 +62,54 @@ def user_input():
 @app.route('/use_existing_info', methods=['POST'])
 def use_existing_info():
     try:
-        patient_info = load_patient_info()
-        result = suspected_diagnoses(patient_info)
+        data = request.json
+        print("Received /use_existing_info:", data)
+        ID = data.get('ID', {})
+        Password = data.get('Password', {})
+        with open(f"db_data/patient_info_{ID}_{Password}.json", 'r') as f:
+            patient_info = json.load(f)
+
+        result = suspected_diagnoses(patient_info, ID, Password)
         return jsonify({"diagnosis": result})
     except Exception as e:
         print("Error in /use_existing_info:", str(e))
         return jsonify({"error": str(e)}), 500
 
 ################
-@app.route('/Check_diagnosis_id', methods=['POST'])
-def check_diagnosis_id():
+@app.route('/R_exist_id', methods=['POST'])
+def R_exist_id():
     try:
         data = request.json
-        print("Received /Check_diagnosis_id:", data)
-        diagnosis_id = data.get('diagnosis_id', {})
-        txt_file_path = f'db_data/{diagnosis_id}_info.txt'
-        if os.path.exists(txt_file_path):
-            with open(txt_file_path, 'r') as file:
-                diag_dis = file.read().splitlines()
-                diagnosis = diag_dis[0]
-                line = diag_dis[1]
-                disabilities = re.split(r'\s*,\s*', line) if ',' in line else [line]
-            exist_diagnosis_id = True
-            result = "Loaded patient information for "+ diagnosis_id+" from existing file. Would you like to use past diagnosis and disabilities?"
+        print("Received /R_exist_id request with data:", data)
+        patientinfo = data.get('patientinfo', '')
+        exist_id = glob.glob(f"db_data/{patientinfo[0]}_*_info.txt")
+        if(exist_id):
+            return jsonify({"exist_id": True})
         else:
-            diagnosis = ""
-            disabilities = []
-            exist_diagnosis_id = False
-            result = "No existing patient info found for "+ diagnosis_id+". Press any keys to write new Patient info."
-        return jsonify({"result": result, "exist_diagnosis_id": exist_diagnosis_id, "diagnosis_id": diagnosis_id,
-                         "disabilities": disabilities, "diagnosis": diagnosis})
+            return jsonify({"exist_id": False})
     except Exception as e:
-        print("Error in /Check_diagnosis_id:", str(e))
+        print("Error in /R_exist_id:", str(e))
         return jsonify({"error": str(e)}), 500
+    
+@app.route('/R_valid_id', methods=['POST'])
+def R_valid_id():
+    try:
+        data = request.json
+        print("Received /R_valid_id request with data:", data)
+        patientinfo = data.get('patientinfo', '')
+        exist_id = glob.glob(f"db_data/{patientinfo[0]}_*_info.txt")
+        exist_password =glob.glob(f"db_data/{patientinfo[0]}_{patientinfo[1]}_info.txt")
+
+        if(exist_id and exist_password):
+            return jsonify({"valid_id": True, "valid_password": True})
+        elif(exist_id and not exist_password):
+            return jsonify({"valid_id": True, "valid_password": False})
+        else:
+            return jsonify({"valid_id": False, "valid_password": False})
+    except Exception as e:
+        print("Error in /R_valid_id:", str(e))
+        return jsonify({"error": str(e)}), 500
+    
 
 @app.route('/File_exists', methods=['POST'])
 def file_exists():
@@ -83,8 +117,9 @@ def file_exists():
         data = request.json
         print("Received /File_exists:", data)
         diagnosis_id = data.get('diagnosis_id', {})
+        Password = data.get('Password', {})
 
-        txt_file_path = f'db_data/{diagnosis_id}_info.txt'
+        txt_file_path = f'db_data/{diagnosis_id}_{Password}_info.txt'
         with open(txt_file_path, 'r') as file:
             diag_dis = file.read().splitlines()
             diagnosis = diag_dis[0]
@@ -156,7 +191,9 @@ def input_item_scores():
         data = request.json
         print("Received /Input_item_scores:", data)
         diagnosis_id = data.get('diagnosis_id', {})
-        txt_file_path = f'db_data/{diagnosis_id}_info.txt'
+        Password = data.get('Password', {})
+
+        txt_file_path = f'db_data/{diagnosis_id}_{Password}_info.txt'
         with open(txt_file_path, 'r') as file:
             line = file.read().splitlines()[1]
             disabilities = re.split(r'\s*,\s*', line) if ',' in line else [line]
@@ -198,7 +235,9 @@ def update_patient_info():
         print("Received /Update_patient_info:", data)
         patient_info = data.get('patient_info', {})
         diagnosis_id = data.get('diagnosis_id', {})
-        file_path = f'db_data/{diagnosis_id}_info.txt'
+        Password = data.get('Password', {})
+
+        file_path = f'db_data/{diagnosis_id}_{Password}_info.txt'
         # Save the patient info to a file
         with open(file_path, 'w') as file:
             file.write('\n'.join(patient_info))    
@@ -222,4 +261,4 @@ def complications_input():
         return jsonify({"error": str(e)}), 500
     
 if __name__ == '__main__':
-    app.run(debug=False, host='0.0.0.0',port=5000)  # Changed port to 5011 and enabled debug mode
+    app.run(debug=False, host='0.0.0.0',port=5000)
