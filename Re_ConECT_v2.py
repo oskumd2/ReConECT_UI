@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import warnings
 warnings.filterwarnings("ignore")
 # Set API key
@@ -17,6 +19,12 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain.chains.combine_documents import create_stuff_documents_chain
 import pandas as pd
 from datetime import timedelta
+
+# Load environment variables
+load_dotenv()
+# Generate a session ID
+session_id = uuid.uuid4()
+# Set directory for vector storage
 
 # Load environment variables
 load_dotenv()
@@ -1267,66 +1275,6 @@ def create_history_questions_Peripheral_Neuropathy(patient_info):
         f"(Q8)\nDoctor: Please let me know if you have any other symptoms that are concerning, aside from what I've already asked about.\nPatient: {patient_info['Q8']}"
     ])
 
-# Function to generate suspected diagnoses
-def suspected_diagnoses(patient_info, ID, Password):
-    # Create RAG chain
-    chief_complaint = patient_info["patient_chief_complaint"]
-
-    persist_directory1 = ""
-    uploaded_file_path = ""
-    if chief_complaint.lower() == "lower extremity pain":
-        uploaded_file_path = "rag_data/Chief Complaint/[6]_Shoulder_Pain_Red_Flags.pdf"
-        persist_directory1 = persist_directory1_Lower_Extremity
-    elif chief_complaint.lower() == "upper extremity pain":
-        uploaded_file_path = "rag_data/Chief Complaint/[5]_Rehab_Textbook_Upper_Extremity_Pain.pdf"
-        persist_directory1 = persist_directory1_Upper_Extremity
-    elif chief_complaint.lower() == "low back pain":
-        uploaded_file_path = "rag_data/Chief Complaint/[8]_Rehab_Textbook_Low_Back_Pain.pdf"
-        persist_directory1 = persist_directory1_Low_Back_Pain
-    elif chief_complaint.lower() == "neck pain":
-        uploaded_file_path = "rag_data/Chief Complaint/[9]_Rehab_Textbook_Neck_Pain.pdf"
-        persist_directory1 = persist_directory1_Neck_Pain
-
-    if os.path.exists(persist_directory1):
-        print("Loading the vector store from local storage.")
-        vectorstore = Chroma(
-            persist_directory=persist_directory1,
-            embedding_function=UpstageEmbeddings(model="solar-embedding-1-large")
-        )
-    else:
-        print("Creating a new vector store.")
-        with tempfile.TemporaryDirectory() as temp_dir:
-            file_path = os.path.join(temp_dir, os.path.basename(uploaded_file_path))
-            with open(file_path, "wb") as f:
-                f.write(open(uploaded_file_path, "rb").read())
-            vectorstore = process_pdf_onlyfile(file_path, persist_directory1)
-
-    if chief_complaint.lower() == "lower extremity pain":
-        history_questions = create_history_questions_Lower_Extremity(patient_info)
-        simple_rag_chain = create_simple_rag_chain_Lower_Extremity(vectorstore, os.getenv("UPSTAGE_API_KEY"))
-    elif chief_complaint.lower() == "upper extremity pain":
-        history_questions = create_history_questions_Upper_Extremity(patient_info)
-        simple_rag_chain = create_simple_rag_chain_Upper_Extremity(vectorstore, os.getenv("UPSTAGE_API_KEY"))
-    elif chief_complaint.lower() == "low back pain":
-        history_questions = create_history_questions_Low_Back_Pain(patient_info)
-        simple_rag_chain = create_simple_rag_chain_Low_Back_Pain(vectorstore, os.getenv("UPSTAGE_API_KEY"))
-    elif chief_complaint.lower() == "neck pain":
-        history_questions = create_history_questions_Neck_Pain(patient_info)
-        simple_rag_chain = create_simple_rag_chain_Neck_Pain(vectorstore, os.getenv("UPSTAGE_API_KEY"))
-
-    qa_human_prompt = f"""
-    <Conversation>\n
-    {history_questions}
-    """
-
-    response = simple_rag_chain.invoke({
-        "input": qa_human_prompt,
-    })
-
-    save_patient_info(patient_info, ID, Password)
-
-    return response["answer"]
-
 # PDF processing and indexing function
 def process_pdf(file_path, persist_directory):
     if os.path.exists(persist_directory):
@@ -1566,3 +1514,254 @@ def suspected_complications(patient_info, diagnosis):
     })
 
     return response["answer"]
+
+def load_disease_data_by_type(data_type, base_folder='diagnosis_json_data'):
+    """
+    Function to load four types of JSON files stored in a folder and restore them as a dictionary.
+
+    Args:
+    - data_type: Type of data (e.g., 'type1', 'type2', 'type3', 'type4')
+    - base_folder: Base folder path to load the data from (default: 'diagnosis_json_data')
+
+    Returns:
+    - Restored data in the form of a dictionary (including diseases_dict and rules)
+    """
+    diseases_dict = {}
+    rules = []
+    ["lower extremity pain", "upper extremity pain", "low back pain", "neck pain"]
+
+    type_folder = os.path.join(base_folder, data_type)
+
+    if not os.path.exists(type_folder):
+        print(f"{type_folder} folder not exist.")
+        return None
+
+    for disease_folder in os.listdir(type_folder):
+        disease_path = os.path.join(type_folder, disease_folder)
+
+        json_file_path = os.path.join(disease_path, 'data.json')
+        if os.path.exists(json_file_path):
+            with open(json_file_path, 'r') as json_file:
+                data = json.load(json_file)
+                diseases_dict[data['disease']] = data['count']
+                rules.extend(data['related_rules'])
+
+    return diseases_dict, rules
+
+def calculate_disease_scores(category, question_dict):
+    category_mapping = {
+        "neck pain": "Chief_Complaint/Neck_Pain",
+        "lower extremity pain": "Chief_Complaint/Lower_Extremity",
+        "upper extremity pain": "Chief_Complaint/Upper_Extremity",
+        "low back pain": "Chief_Complaint/Back_Pain",
+        "traumatic brain injury": "Complication/Traumatic_Brain_Injury",
+        "stroke": "Complication/Stroke",
+        "parkinsons disease": "Complication/Parkinsons_Disease",
+        "spinal cord injury": "Complication/Spinal_Cord_Injury",
+        "als": "Complication/ALS",
+        "peripheral neuropathy": "Complication/Peripheral_Neuropathy"
+    }
+    category = category_mapping.get(category.lower(), category)
+
+    diseases_dict, rules = load_disease_data_by_type(category)
+
+    if diseases_dict is None or rules is None:
+        print(f"No data found for category {category}")
+        return []
+
+    disease_scores = {disease: 0 for disease in diseases_dict.keys()}
+
+    for rule in rules:
+        if question_dict.get(rule['question']) == rule['answer']:
+            for disease in rule['diseases']:
+                intercept = rule['intercept']
+                weight = rule['weight']
+                total_diseases = diseases_dict[disease]
+                score = (intercept * weight) / total_diseases
+                disease_scores[disease] += score
+
+    sorted_disease_scores = sorted(disease_scores.items(), key=lambda x: x[1], reverse=True)
+
+    return sorted_disease_scores[:3]
+
+def calculate_red_flags(questions_dict, data_type):
+    """
+    Function to load Red Flags rules from a file based on the given data_type and calculate the Red Flags score.
+
+    Args:
+    - questions_dict: Dictionary containing questions and answers
+    - data_type: Type of data (e.g., 'Neck_Pain', 'Lower_Extremity', 'Upper_Extremity', 'Back_Pain')
+
+    Returns:
+    - red_flags_score: Calculated Red Flags score
+    """
+    category_mapping = {
+        "neck pain": "Neck Pain",
+        "lower extremity pain": "Lower_Extremity",
+        "upper extremity pain": "Upper_Extremity",
+        "low back pain": "Back_Pain"
+    }
+    data_type = category_mapping.get(data_type.lower(), data_type)
+
+    red_flags_score = 0
+    base_folder = 'suspected_diagnosis_data'
+    type_folder = os.path.join(base_folder, data_type)
+    red_flags_folder = os.path.join(type_folder, f'red_flags_{data_type}')
+    json_file_path = os.path.join(red_flags_folder, 'red_flags_data.json')
+    txt = ""
+
+    try:
+        with open(json_file_path, 'r') as json_file:
+            data = json.load(json_file)
+            red_flags_rules = data.get('related_rules', [])
+    except FileNotFoundError:
+        print(f"Cannot find the Red Flags data file for {data_type}: {json_file_path}")
+        return red_flags_score
+
+    for rule in red_flags_rules:
+        if '&' in rule['question']:
+            questions = rule['question'].split(' & ')
+            condition = rule['answer']
+
+            local_vars = {}
+            for q in questions:
+                answer = questions_dict.get(q)
+                try:
+                    local_vars[q] = int(answer)
+                except (ValueError, TypeError):
+                    local_vars[q] = answer
+
+            try:
+                if eval(condition, {}, local_vars):
+                    red_flags_score += rule['weight']
+            except Exception as e:
+                print(f"{rule['question']}에 대한 조건 평가 오류: {e}")
+        else:
+            q = rule['question']
+            expected_answer = rule['answer']
+            actual_answer = questions_dict.get(q)
+
+            try:
+                actual_answer_num = int(actual_answer)
+                expected_answer_num = int(expected_answer)
+                if actual_answer_num == expected_answer_num:
+                    red_flags_score += rule['weight']
+            except (ValueError, TypeError):
+                if actual_answer == expected_answer:
+                    red_flags_score += rule['weight']
+
+    if red_flags_score > 0:
+        print(f"Red flags have been detected for {data_type}. Hospital visit is recommended for further evaluations.")
+        txt = f"Red flags have been detected for {data_type}. Hospital visit is recommended for further evaluations."
+
+    return red_flags_score, txt
+
+# Function to generate suspected diagnoses
+def suspected_diagnoses(patient_info, ID, Password):
+
+    chief_complaint = patient_info["patient_chief_complaint"]
+
+    pdf_paths_and_directories = {
+        "lower extremity pain": {
+            "directory": "db_data/chroma_db1_Lower_Extremity_new1",
+            "path": "rag_data/Chief Complaint/[1]_Rehab_Textbook_Lower_Extremity_Pain_new.pdf"
+        },
+        "upper extremity pain": {
+            "directory": "db_data/chroma_db1_Upper_Extremity",
+            "path": "rag_data/Chief Complaint/[5]_Rehab_Textbook_Upper_Extremity_Pain.pdf"
+        },
+        "low back pain": {
+            "directory": "db_data/chroma_db1_Low_Back_Pain",
+            "path": "rag_data/Chief Complaint/[8]_Rehab_Textbook_Low_Back_Pain.pdf"
+        },
+        "neck pain": {
+            "directory": "db_data/chroma_db1_Neck_Pain_new",
+            "path": "rag_data/Chief Complaint/[9]_Rehab_Textbook_Neck_Pain_new.pdf"
+        }
+    }
+
+    if chief_complaint in pdf_paths_and_directories:
+        selected_directory = pdf_paths_and_directories[chief_complaint]["directory"]
+        selected_pdf_path = pdf_paths_and_directories[chief_complaint]["path"]
+
+        vectorstore = process_pdf(selected_pdf_path, selected_directory)
+        print(f"Processed {selected_pdf_path} and stored in {selected_directory}")
+    else:
+        print(f"No matching chief complaint found for: {chief_complaint}")
+
+    top_3_diseases = calculate_disease_scores(chief_complaint, patient_info)
+
+    system_prompt1 = """Please provide further evaluations and treatments of {suspected_diagnoses} with {context}.
+
+    Further evaluations are tests to confirm the diagnosis of {suspected_diagnoses} itself.
+    Treatments are direct treatments, not treatments for factors of {suspected_diagnoses}.
+
+    **Further Evaluations:**
+    1. Explain the additional evaluations in simple terms that an 18-year-old high school graduate can easily understand.
+    2. Remove all abbreviations and fully explain all terms.
+    3. Clearly state the names of the necessary tests in an easy-to-understand manner.
+
+    **Treatments:**
+    - Gather as much relevant information as possible and explain it in a friendly and easy-to-understand way.
+    - List primarily treatments that can be performed at home.
+
+    ## Response Format
+    Possible diagnosis : {suspected_diagnoses}
+
+    ⚑ Further Evaluations:
+      1. [Test Name]
+          - Purpose:
+          - Expected Results:
+      2. [Test Name]
+          - Purpose:
+          - Expected Results:
+      3. [Test Name]
+          - Purpose:
+          - Expected Results:
+
+    ⚑ Treatments: [give 3 treatments]
+      1. [Test Name]
+          - Description:
+      2. [Test Name]
+          - Description:
+      3. [Test Name]
+          - Description:"""
+
+
+    rag_chain1 = create_rag_chain(vectorstore, os.getenv("UPSTAGE_API_KEY"), system_prompt1)
+
+    results_list = []
+    disease_list = []
+
+    for disease, probability in top_3_diseases:
+        qa_human_prompt = f"""
+        Please provide further evaluations and treatments over {disease}.
+        """
+
+        # response = rag_chain1.invoke({
+        #     "input": qa_human_prompt,
+        #     "suspected_diagnoses": disease,
+        # })
+
+        result = {
+            "disease": disease,
+            "probability": probability,
+            # "response": response['answer']
+        }
+
+        # results_list.append(response['answer'])
+        disease_list.append(disease)
+
+    score, txt = calculate_red_flags(patient_info, 'Lower_Extremity')
+    print(f"Red flags score: {score}")
+
+    save_patient_info(patient_info, ID, Password)
+
+    final_sentences=""
+    for i in range(len(disease_list)):
+        final_sentences += f"\n {disease_list[i]}:\n"
+        final_sentences += f"{results_list[i]}\n"
+    final_sentences += f"Red flags score: {score}"
+    final_sentences += final_sentences
+
+    return disease_list, results_list, score, txt, final_sentences
