@@ -40,6 +40,6 @@ git push heroku master<br /><br />
 
 [frontend terminal] <br />
 (exit from venv) cd chatbot-ui<br />
-(add newly created heroku app link to const herokulink in Chatbot_v2.py) <br />
+(add newly created heroku app link to constant variable 'herokulink' in Chatbot_v2.py) <br />
 npm run build<br />
 copy all files in ./chatbot-ui/build/ to oskumd2.github.io repository (or own own Github pages repository)
