@@ -1,4 +1,8 @@
 # ReConECT_UI
+Re-ConECT: text-based Rehabilitation AI Chatbot for Continuous function evaluation & customized training  <br /> <br />
+![Alt text 1](Photo_1.png)
+![Alt text 1](Photo_2.png)
+![Alt text 1](Photo_3.png)  <br /> <br />
 This repository shows methods to make chatbot UI based on Upstage APIs, Flask backend and React frontend. <br />
 3rd Prize winning project in [2024 Upstage Hackathon](https://m.economidaily.com/view/20240930081039778). <br />
 contact oskumd00@gmail.com if you have any questions or request for RAG database (db_data, rag_data, diagnosis_json_data folder). <br /><br />
