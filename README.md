@@ -2,7 +2,8 @@
 UI for ReConECT<br />
 Web design by [@yunnii-c](https://www.github.com/yunnii-c) <br />
 Web development by [@oskumd2](https://www.github.com/oskumd2) <br />
-Model development by [@SeungHoJUN](https://github.com/SeungHoJUN)
+Model development by [@SeungHoJUN](https://github.com/SeungHoJUN) <br /><br />
+You can test our UI at [oskumd2.github.io](https://oskumd2.github.io)
 
 ## How to develop the app in your local environment
 
@@ -39,4 +40,4 @@ git push heroku master<br /><br />
 (exit from venv) cd chatbot-ui<br />
 (add newly created heroku app link to const herokulink in Chatbot_v2.py) <br />
 npm run build<br />
-copy all files in ./chatbot-ui/build/ to oskumd2.github.io repository (or own own Github pages repository) 
+copy all files in ./chatbot-ui/build/ to oskumd2.github.io repository (or own own Github pages repository)
