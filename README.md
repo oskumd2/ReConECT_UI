@@ -1,7 +1,8 @@
 # ReConECT_UI
 UI for ReConECT<br />
-Web design by @yunnii-c <br />
-Web development by @oskumd2
+Web design by [@yunnii-c](https://www.github.com/yunnii-c) <br />
+Web development by [@oskumd2](https://www.github.com/oskumd2) <br />
+Model development by [@SeungHoJUN](https://github.com/SeungHoJUN)
 
 ## How to develop the app in your local environment
 
