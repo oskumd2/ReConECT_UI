@@ -1,5 +1,6 @@
 # ReConECT_UI
-UI for ReConECT<br />
+UI for ReConECT: This repository shows methods to make chatbot UI based on Upstage APIs, Flask backend and React frontend. <br />
+contact oskumd00@gmail.com if you have any questions. <br /><br />
 Web design by [@yunnii-c](https://www.github.com/yunnii-c) <br />
 Web development by [@oskumd2](https://www.github.com/oskumd2) <br />
 Model development by [@SeungHoJUN](https://github.com/SeungHoJUN) <br /><br />
