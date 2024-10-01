@@ -5,7 +5,6 @@ contact oskumd00@gmail.com if you have any questions or request for RAG database
 Model development by [@SeungHoJUN](https://github.com/SeungHoJUN) <br />
 Web design and Domain knowledge implementation by [@yunnii-c](https://www.github.com/yunnii-c) (M.D.) <br />
 Web development and Domain knowledge implementation by [@oskumd2](https://www.github.com/oskumd2) (M.D.)<br /><br />
-You can test our UI at [oskumd2.github.io](https://oskumd2.github.io)
 
 ## How to develop the app in your local environment
 
