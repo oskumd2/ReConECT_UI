@@ -83,7 +83,7 @@ def user_input():
         ID = data.get('ID', {})
         Password = data.get('Password', {})
 
-        result = suspected_diagnoses(patient_info, ID, Password)
+        _,_,_,_,result = suspected_diagnoses(patient_info, ID, Password)
         return jsonify({"diagnosis": result})
     except Exception as e:
         print("Error in /user_input:", str(e))
@@ -99,7 +99,7 @@ def use_existing_info():
         with open(f"db_data/patient_info_{ID}_{Password}.json", 'r') as f:
             patient_info = json.load(f)
 
-        result = suspected_diagnoses(patient_info, ID, Password)
+        _,_,_,_,result = suspected_diagnoses(patient_info, ID, Password)
         return jsonify({"diagnosis": result})
     except Exception as e:
         print("Error in /use_existing_info:", str(e))
